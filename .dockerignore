@@ -1,0 +1,12 @@
+bin/
+dist/
+frontend/dist/
+frontend/node_modules/
+frontend/.svelte-kit/
+dev/*.db
+dev/data/
+*.db
+.git/
+.github/
+.DS_Store
+*.md

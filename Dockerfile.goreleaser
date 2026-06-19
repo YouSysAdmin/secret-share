@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1
+#
+# Used by goreleaser's `dockers`: expects a pre-built linux `secret-share` binary
+# at the build-context root (goreleaser places it there). For a build-from-source
+# image, use the top-level Dockerfile instead.
+
+FROM busybox:stable AS prep
+RUN mkdir -p /out/data && chown 65532:65532 /out/data
+
+FROM gcr.io/distroless/static-debian12:nonroot
+WORKDIR /app
+COPY --chown=65532:65532 secret-share /app/secret-share
+COPY --from=prep --chown=65532:65532 /out/data /data
+VOLUME ["/data"]
+ENV TZ=UTC
+EXPOSE 3000
+USER nonroot:nonroot
+ENTRYPOINT ["/app/secret-share"]
+CMD ["serve"]

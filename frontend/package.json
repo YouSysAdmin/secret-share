@@ -1,0 +1,28 @@
+{
+  "name": "secret-share-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Svelte frontend for secret-share",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.65.0",
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-svelte": "^2.46.1",
+    "globals": "^15.15.0",
+    "svelte": "^5.56.3",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.6"
+  }
+}

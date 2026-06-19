@@ -1,0 +1,21 @@
+# Build artifacts
+/bin/
+/dist/
+
+# Frontend deps + build output. The embedded SPA is rebuilt by `make frontend`
+# (and in CI before the binary), so it is never committed.
+/frontend/dist/
+/frontend/node_modules/
+/frontend/.svelte-kit/
+
+# Local dev state
+/dev/*.db
+/dev/data/
+*.db
+
+# OS / editor
+.DS_Store
+*.swp
+
+# Test/tooling artifacts
+.playwright-mcp/
