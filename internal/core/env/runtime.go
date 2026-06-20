@@ -2,9 +2,11 @@ package env
 
 import (
 	"log/slog"
+	"time"
 
 	"go.etcd.io/bbolt"
 
+	"github.com/YouSysAdmin/secret-share/internal/core/oidc"
 	"github.com/YouSysAdmin/secret-share/internal/database"
 )
 
@@ -22,4 +24,12 @@ type Runtime struct {
 	// the lifecycle surface (path/backup/close + bucket names).
 	DB            *bbolt.DB
 	StoreProvider database.Database
+
+	// Auth (private mode). SessionSecret keys the HMAC session cookie and the
+	// at-rest secretbox seal; SessionTTL is the cookie lifetime. Both are zero
+	// when auth is disabled. OIDC is the SSO provider registry (nil when no
+	// providers are configured).
+	SessionSecret []byte
+	SessionTTL    time.Duration
+	OIDC          *oidc.Registry
 }

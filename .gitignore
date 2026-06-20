@@ -9,8 +9,7 @@
 /frontend/.svelte-kit/
 
 # Local dev state
-/dev/*.db
-/dev/data/
+/dev/**
 *.db
 
 # OS / editor

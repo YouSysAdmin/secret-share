@@ -232,6 +232,12 @@ a:hover {
     box-shadow: var(--shadow-md);
 }
 
+/* Stacked cards (e.g. the account/users pages) get a gap so they don't read as
+   one merged panel. */
+.card + .card {
+    margin-top: 1rem;
+}
+
 /* ============================================================
    Form fields
    ============================================================ */

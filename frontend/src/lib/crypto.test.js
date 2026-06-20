@@ -3,7 +3,7 @@ import { encryptToPayload, decryptFromPayload } from "./crypto.js";
 
 describe("crypto", () => {
   it("round-trips plaintext", async () => {
-    const plain = "hunter2 — with unicode ✓ and\nnewlines";
+    const plain = "hunter2 - with unicode ✓ and\nnewlines";
     const { ciphertext, key } = await encryptToPayload(plain);
     expect(ciphertext).toBeTruthy();
     expect(key).toBeTruthy();

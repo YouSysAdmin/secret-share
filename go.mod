@@ -3,12 +3,27 @@ module github.com/YouSysAdmin/secret-share
 go 1.26.4
 
 require (
+	github.com/coreos/go-oidc/v3 v3.19.0
 	github.com/go-viper/mapstructure/v2 v2.5.0
+	github.com/go-webauthn/webauthn v0.17.4
 	github.com/gofiber/fiber/v2 v2.52.13
+	github.com/pquerna/otp v1.5.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	go.etcd.io/bbolt v1.4.3
 	golang.org/x/crypto v0.53.0
+	golang.org/x/oauth2 v0.36.0
+	golang.org/x/term v0.44.0
+)
+
+require (
+	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
+	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
+	github.com/go-webauthn/x v0.2.6 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
+	github.com/google/go-tpm v0.9.8 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 )
 
 require (
@@ -33,7 +48,7 @@ require (
 	github.com/valyala/fasthttp v1.71.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/sys v0.46.0 // indirectm
+	golang.org/x/sys v0.46.0 // indirect; indirectm
 	golang.org/x/text v0.38.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )

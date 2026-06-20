@@ -19,6 +19,6 @@ func NewRoot() *cobra.Command {
 	serve := newServeCmd()
 	serve.Flags().StringP("config", "c", "", "path to YAML config (default: ./secret-share.yaml)")
 
-	root.AddCommand(serve, newVersionCmd())
+	root.AddCommand(serve, newUserCmd(), newVersionCmd())
 	return root
 }

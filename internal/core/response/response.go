@@ -32,6 +32,13 @@ func BadRequest(c *fiber.Ctx, err error) error {
 	return Error(c, http.StatusBadRequest, msg)
 }
 
+func Unauthorized(c *fiber.Ctx, msg string) error {
+	if msg == "" {
+		msg = "unauthorized"
+	}
+	return Error(c, http.StatusUnauthorized, msg)
+}
+
 func Forbidden(c *fiber.Ctx, msg string) error {
 	if msg == "" {
 		msg = "forbidden"

@@ -1,32 +1,96 @@
 <script>
     import "../app.css";
-    import { base } from "$lib/api.js";
+    import { base, auth } from "$lib/api.js";
     import Toaster from "$lib/components/Toaster.svelte";
+    import {
+        sessionState,
+        loadSession,
+        refreshSession,
+    } from "$lib/stores/session.svelte.js";
 
     let { children } = $props();
+
+    $effect(() => {
+        loadSession();
+    });
+
+    async function logout() {
+        try {
+            await auth.logout();
+        } catch {
+            /* idempotent */
+        }
+        await refreshSession();
+        window.location.href = base + "/signin";
+    }
 </script>
 
 <nav class="app-nav">
     <a class="brand" href="{base}/">
-        <svg
+        <img
             class="brand-logo"
+            src="{base}/logo.svg"
             width="16"
             height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            alt=""
             aria-hidden="true"
-        >
-            <rect x="3" y="11" width="18" height="11" rx="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
+        />
         Share
     </a>
+
+    {#if sessionState.authEnabled}
+        <div class="nav-right">
+            {#if sessionState.user}
+                {#if sessionState.isAdmin}
+                    <a class="nav-link" href="{base}/users">Users</a>
+                {/if}
+                <a class="nav-link" href="{base}/account">Account</a>
+                <span class="nav-email" title={sessionState.user.email}>
+                    {sessionState.user.email}
+                </span>
+                <button class="nav-link as-btn" onclick={logout}>Sign out</button>
+            {:else if sessionState.loaded}
+                <a class="nav-link" href="{base}/signin">Sign in</a>
+            {/if}
+        </div>
+    {/if}
 </nav>
 
 {@render children()}
 
 <Toaster />
+
+<style>
+    .app-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    .nav-link {
+        color: var(--fg-2);
+        text-decoration: none;
+        font-size: var(--fs-small, 14px);
+    }
+    .nav-link:hover {
+        color: var(--fg-0);
+    }
+    .as-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+    }
+    .nav-email {
+        color: var(--fg-3);
+        font-size: var(--fs-small, 14px);
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>

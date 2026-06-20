@@ -20,4 +20,12 @@ type Database interface {
 
 	// GetSecretsBucketName returns the bucket/namespace where secrets live.
 	GetSecretsBucketName() string
+
+	// GetUsersBucketName returns the bucket/namespace where console
+	// users (private-mode identities) live.
+	GetUsersBucketName() string
+
+	// GetSecretVisibilityBucketName returns the bucket/namespace recording which
+	// secrets are private (require a session to reveal).
+	GetSecretVisibilityBucketName() string
 }
