@@ -47,10 +47,7 @@
                 {#if sessionState.isAdmin}
                     <a class="nav-link" href="{base}/users">Users</a>
                 {/if}
-                <a class="nav-link" href="{base}/account">Account</a>
-                <span class="nav-email" title={sessionState.user.email}>
-                    {sessionState.user.email}
-                </span>
+                <a class="nav-link" href="{base}/account">{sessionState.user.email}</a>
                 <button class="btn primary" onclick={logout}>Sign out</button>
             {:else if sessionState.loaded}
                 <a class="btn primary" href="{base}/signin">Sign in</a>
