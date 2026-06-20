@@ -9,7 +9,7 @@
 /frontend/.svelte-kit/
 
 # Local dev state
-/dev/**
+/dev
 *.db
 
 # OS / editor
@@ -18,3 +18,8 @@
 
 # Test/tooling artifacts
 .playwright-mcp/
+
+# IDE's
+.idea
+.zed
+.vscode

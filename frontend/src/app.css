@@ -119,6 +119,58 @@
 
     /* === Motion === */
     --dur-fast: 120ms;
+
+    /* === Semantic (theme-aware) ===
+       Pulled out so the light theme can re-point links/code/selection without
+       touching the rules below. Default to the dark-theme brand values. */
+    --link: var(--brand-300);
+    --link-hover: var(--brand-200);
+    --code-fg: var(--brand-300);
+    --selection-bg: var(--brand-500);
+    --selection-fg: #0a0a0a;
+}
+
+/* ============================================================
+   Light theme — overrides the tokens above. The effective theme
+   (light|dark) is written to <html data-theme> by app.html (pre-paint)
+   and kept in sync by src/lib/stores/theme.svelte.js. Dark is the
+   default :root, so only light needs an override block.
+   ============================================================ */
+:root[data-theme="light"] {
+    /* === Color Surface (light primary) === */
+    --bg-0: #f4f6f8;
+    --bg-1: #eaedf1;
+    --bg-2: #ffffff;
+    --bg-3: #e4e8ed;
+    --bg-4: #d9dee4;
+
+    /* === Color Lines === */
+    --line-1: #e2e6ea;
+    --line-2: #d3d8de;
+    --line-3: #bcc3cb;
+
+    /* === Color Foreground (dark neutrals on light) === */
+    --fg-0: #0c0e12;
+    --fg-1: #2a2f37;
+    --fg-2: #565d68;
+    --fg-3: #707782;
+    --fg-4: #a6adb6;
+
+    /* Brand scale is unchanged (amber reads on light too); links/code use a
+       deeper step for contrast against the light surfaces. */
+    --link: var(--brand-700);
+    --link-hover: var(--brand-600);
+    --code-fg: var(--brand-700);
+
+    /* Softer, theme-appropriate elevation (the dark-on-light variety). */
+    --shadow-md:
+        0 1px 2px rgba(16, 24, 40, 0.06),
+        0 6px 16px rgba(16, 24, 40, 0.08);
+    --shadow-lg:
+        0 1px 2px rgba(16, 24, 40, 0.06),
+        0 24px 48px rgba(16, 24, 40, 0.12);
+    --glow-brand:
+        0 0 0 3px rgba(255, 107, 53, 0.3), 0 0 18px rgba(255, 107, 53, 0.2);
 }
 
 /* ============================================================
@@ -165,7 +217,7 @@ p {
 code {
     font-family: var(--font-mono);
     font-size: var(--fs-mono);
-    color: var(--brand-300);
+    color: var(--code-fg);
     background: var(--bg-3);
     padding: 2px 6px;
     border-radius: var(--r-xs);
@@ -173,16 +225,16 @@ code {
 }
 
 ::selection {
-    background: var(--brand-500);
-    color: #0a0a0a;
+    background: var(--selection-bg);
+    color: var(--selection-fg);
 }
 
 a {
-    color: var(--brand-300);
+    color: var(--link);
     text-decoration: none;
 }
 a:hover {
-    color: var(--brand-200);
+    color: var(--link-hover);
 }
 
 :focus-visible {

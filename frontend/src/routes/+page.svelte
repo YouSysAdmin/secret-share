@@ -5,9 +5,6 @@
   import {loadSession, sessionState,} from "$lib/stores/session.svelte.js";
 
   let cfg = $state(null);
-  // gated stays false until we've confirmed the visitor may see the create form.
-  // When auth is on, creating always requires a session, so an anonymous visitor
-  // is sent to sign-in instead of being shown a form that would only 401.
   let gated = $state(false);
   let text = $state("");
   let ttlPreset = $state(""); // a preset value, or "custom"
@@ -146,8 +143,8 @@
       <div class="card">
         <h2>Share a secret</h2>
         <p class="muted">
-          End-to-end encrypted in your browser - we can't read it. Anyone
-          with the link can view it once, then it's deleted.
+          End-to-end encrypted in your browser - we can't read it. <br/>
+          Anyone with the link can view it once, then it's deleted.
         </p>
         <form onsubmit={submit}>
           <div class="field">
@@ -199,7 +196,6 @@
               </p>
             </div>
           {/if}
-
           <button class="btn primary block" type="submit" disabled={busy}>
             {busy ? "Creating…" : "Create link"}
           </button>

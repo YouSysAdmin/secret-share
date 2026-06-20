@@ -2,16 +2,19 @@
     import "../app.css";
     import { base, auth } from "$lib/api.js";
     import Toaster from "$lib/components/Toaster.svelte";
+    import ThemeToggle from "$lib/components/ThemeToggle.svelte";
     import {
         sessionState,
         loadSession,
         refreshSession,
     } from "$lib/stores/session.svelte.js";
+    import { initTheme } from "$lib/stores/theme.svelte.js";
 
     let { children } = $props();
 
     $effect(() => {
         loadSession();
+        initTheme();
     });
 
     async function logout() {
@@ -38,8 +41,8 @@
         Share
     </a>
 
-    {#if sessionState.authEnabled}
-        <div class="nav-right">
+    <div class="nav-right">
+        {#if sessionState.authEnabled}
             {#if sessionState.user}
                 {#if sessionState.isAdmin}
                     <a class="nav-link" href="{base}/users">Users</a>
@@ -48,12 +51,13 @@
                 <span class="nav-email" title={sessionState.user.email}>
                     {sessionState.user.email}
                 </span>
-                <button class="nav-link as-btn" onclick={logout}>Sign out</button>
+                <button class="btn primary" onclick={logout}>Sign out</button>
             {:else if sessionState.loaded}
-                <a class="nav-link" href="{base}/signin">Sign in</a>
+                <a class="btn primary" href="{base}/signin">Sign in</a>
             {/if}
-        </div>
-    {/if}
+        {/if}
+        <ThemeToggle />
+    </div>
 </nav>
 
 {@render children()}
