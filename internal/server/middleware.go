@@ -174,8 +174,20 @@ func loginRateLimiter() fiber.Handler {
 	})
 }
 
+// defaultNoCache sets Cache-Control: no-cache as the baseline for every response.
+// It runs before the handler so anything downstream can override it: cacheable
+// static assets do (uiCacheControl, which runs after the filesystem write), and
+// the /api group upgrades it to the stronger no-store (noStoreCache). What's left
+// is every non-asset route with no explicit cache handling - e.g. /healthz - which
+// must never be served stale. Net effect: assets cache, everything else no-caches.
+func defaultNoCache(c *fiber.Ctx) error {
+	c.Set(fiber.HeaderCacheControl, "no-cache")
+	return c.Next()
+}
+
 // noStoreCache forces Cache-Control: no-store on every /api/* response. Critical
-// here so a revealed secret is never cached.
+// here so a revealed secret is never cached. Stronger than the defaultNoCache
+// baseline (no-store forbids storing at all; no-cache only forces revalidation).
 func noStoreCache(c *fiber.Ctx) error {
 	c.Set(fiber.HeaderCacheControl, "no-store")
 	return c.Next()

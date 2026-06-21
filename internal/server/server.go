@@ -70,6 +70,7 @@ func New(opts Options) (*Server, error) {
 	app := fiber.New(fiberCfg)
 	app.Use(safeRecover)
 	app.Use(securityHeaders(opts.Runtime.Config.Server.BehindTLSProxy))
+	app.Use(defaultNoCache)
 	app.Use(accessLog(opts.Runtime.Log))
 
 	registerRoutes(app, opts.Runtime, opts.Store)
