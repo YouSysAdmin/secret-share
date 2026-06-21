@@ -151,7 +151,7 @@ func accessLog(log *slog.Logger) fiber.Handler {
 		status := c.Response().StatusCode()
 		p := c.Path()
 		level := slog.LevelInfo
-		if isAssetPath(p) {
+		if isAssetPath(p) || isHealthzPath(p) {
 			level = slog.LevelDebug
 		}
 		log.Log(c.UserContext(), level, "http",
@@ -173,6 +173,15 @@ func isAssetPath(p string) bool {
 	switch path.Ext(p) {
 	case ".js", ".mjs", ".css", ".map", ".ico", ".png", ".jpg", ".jpeg",
 		".gif", ".svg", ".webp", ".avif", ".woff", ".woff2", ".ttf", ".eot", ".wasm":
+		return true
+	}
+	return false
+}
+
+// isHealthzPath reports whether p is the /healthz, so accessLog can log it at
+// DEBUG instead of INFO.
+func isHealthzPath(p string) bool {
+	if strings.Contains(p, "/healthz") {
 		return true
 	}
 	return false
