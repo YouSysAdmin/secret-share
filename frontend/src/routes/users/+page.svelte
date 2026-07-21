@@ -2,6 +2,7 @@
     import { base, users } from "$lib/api.js";
     import { toast } from "$lib/stores/toast.svelte.js";
     import { sessionState, loadSession } from "$lib/stores/session.svelte.js";
+    import { t } from "$lib/i18n.svelte.js";
 
     let rows = $state([]);
     let ready = $state(false);
@@ -43,7 +44,7 @@
                 role: cRole,
                 password: cPassword || undefined,
             });
-            toast.success(cPassword ? "Local user created." : "OIDC user created.");
+            toast.success(t(cPassword ? "users.localCreated" : "users.oidcCreated"));
             cEmail = cName = cPassword = "";
             cRole = "user";
             await refresh();
@@ -66,34 +67,34 @@
 
     function setRole(u, role) {
         if (role === u.role) return;
-        update(u.email, { role }, `${u.email} is now ${role}.`);
+        update(u.email, { role }, t("users.roleSet", { email: u.email, role }));
     }
 
     function toggleEnabled(u) {
-        update(u.email, { enabled: !u.enabled }, u.enabled ? "User disabled." : "User enabled.");
+        update(u.email, { enabled: !u.enabled }, t(u.enabled ? "users.disabled" : "users.enabled"));
     }
 
     function resetPassword(u) {
-        const pw = window.prompt(`New password for ${u.email} (8-72 chars):`);
+        const pw = window.prompt(t("users.pwPrompt", { email: u.email }));
         if (!pw) return;
-        update(u.email, { password: pw }, "Password reset.");
+        update(u.email, { password: pw }, t("users.pwReset"));
     }
 
     function revoke2fa(u) {
-        if (!window.confirm(`Revoke 2FA for ${u.email}?`)) return;
-        update(u.email, { clear_totp: true }, "2FA revoked.");
+        if (!window.confirm(t("users.confirm2fa", { email: u.email }))) return;
+        update(u.email, { clear_totp: true }, t("users.twofaRevoked"));
     }
 
     function revokePasskeys(u) {
-        if (!window.confirm(`Remove all passkeys for ${u.email}?`)) return;
-        update(u.email, { clear_passkeys: true }, "Passkeys removed.");
+        if (!window.confirm(t("users.confirmKeys", { email: u.email }))) return;
+        update(u.email, { clear_passkeys: true }, t("users.keysRemoved"));
     }
 
     async function del(u) {
-        if (!window.confirm(`Delete ${u.email}? This cannot be undone.`)) return;
+        if (!window.confirm(t("users.confirmDelete", { email: u.email }))) return;
         try {
             await users.remove(u.email);
-            toast.success("User deleted.");
+            toast.success(t("users.deleted"));
             await refresh();
         } catch (err) {
             toast.error(err.message);
@@ -104,20 +105,19 @@
 <div class="container wide">
     {#if ready}
         <div class="card">
-            <h2>Users</h2>
+            <h2>{t("users.title")}</h2>
             <p class="muted">
-                Manage who can sign in. A password makes a local account; leave it
-                blank for an SSO account provisioned by email.
+                {t("users.intro")}
             </p>
             <form class="create" onsubmit={createUser}>
-                <input class="input" type="email" bind:value={cEmail} placeholder="email" required />
-                <input class="input" bind:value={cName} placeholder="name (optional)" />
+                <input class="input" type="email" bind:value={cEmail} placeholder={t("users.phEmail")} required />
+                <input class="input" bind:value={cName} placeholder={t("users.phName")} />
                 <select class="input" bind:value={cRole}>
-                    <option value="user">user</option>
-                    <option value="admin">admin</option>
+                    <option value="user">{t("users.roleUser")}</option>
+                    <option value="admin">{t("users.roleAdmin")}</option>
                 </select>
-                <input class="input" type="password" bind:value={cPassword} placeholder="password (optional)" />
-                <button class="btn primary" type="submit" disabled={cBusy || !cEmail}>Add</button>
+                <input class="input" type="password" bind:value={cPassword} placeholder={t("users.phPassword")} />
+                <button class="btn primary" type="submit" disabled={cBusy || !cEmail}>{t("users.add")}</button>
             </form>
         </div>
 
@@ -125,48 +125,48 @@
             <table class="tbl">
                 <thead>
                     <tr>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Source</th>
-                        <th>2FA</th>
-                        <th>Passkeys</th>
-                        <th>Enabled</th>
-                        <th>Actions</th>
+                        <th>{t("users.colEmail")}</th>
+                        <th>{t("users.colRole")}</th>
+                        <th>{t("users.colSource")}</th>
+                        <th>{t("users.col2fa")}</th>
+                        <th>{t("users.colPasskeys")}</th>
+                        <th>{t("users.colEnabled")}</th>
+                        <th>{t("users.colActions")}</th>
                     </tr>
                 </thead>
                 <tbody>
                     {#each rows as u (u.email)}
                         <tr class:disabled={!u.enabled}>
-                            <td>{u.email}{#if u.pinned}<span class="tag">pinned</span>{/if}</td>
+                            <td>{u.email}{#if u.pinned}<span class="tag">{t("users.pinned")}</span>{/if}</td>
                             <td>
                                 <select
                                     class="input sm"
                                     value={u.role}
                                     onchange={(e) => setRole(u, e.currentTarget.value)}
                                 >
-                                    <option value="user">user</option>
-                                    <option value="admin">admin</option>
+                                    <option value="user">{t("users.roleUser")}</option>
+                                    <option value="admin">{t("users.roleAdmin")}</option>
                                 </select>
                             </td>
                             <td class="mono">{u.source}</td>
-                            <td>{u.totp_enabled ? "on" : "-"}</td>
+                            <td>{u.totp_enabled ? t("users.on") : "-"}</td>
                             <td>{u.passkey_count || 0}</td>
                             <td>
                                 <button class="btn xs" onclick={() => toggleEnabled(u)}>
-                                    {u.enabled ? "disable" : "enable"}
+                                    {u.enabled ? t("users.disable") : t("users.enable")}
                                 </button>
                             </td>
                             <td class="actions">
                                 {#if u.has_password}
-                                    <button class="btn xs" onclick={() => resetPassword(u)}>reset pw</button>
+                                    <button class="btn xs" onclick={() => resetPassword(u)}>{t("users.resetPw")}</button>
                                 {/if}
                                 {#if u.totp_enabled}
-                                    <button class="btn xs" onclick={() => revoke2fa(u)}>revoke 2FA</button>
+                                    <button class="btn xs" onclick={() => revoke2fa(u)}>{t("users.revoke2fa")}</button>
                                 {/if}
                                 {#if u.passkey_count > 0}
-                                    <button class="btn xs" onclick={() => revokePasskeys(u)}>revoke keys</button>
+                                    <button class="btn xs" onclick={() => revokePasskeys(u)}>{t("users.revokeKeys")}</button>
                                 {/if}
-                                <button class="btn xs danger" onclick={() => del(u)}>delete</button>
+                                <button class="btn xs danger" onclick={() => del(u)}>{t("users.delete")}</button>
                             </td>
                         </tr>
                     {/each}

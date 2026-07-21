@@ -1,6 +1,7 @@
 <script>
     import { base, auth } from "$lib/api.js";
     import { sessionState, refreshSession } from "$lib/stores/session.svelte.js";
+    import { t } from "$lib/i18n.svelte.js";
 
     let open = $state(false);
     let root;
@@ -89,17 +90,17 @@
                     class="menu-item"
                     role="menuitem"
                     href="{base}/users"
-                    onclick={close}>Users</a
+                    onclick={close}>{t("nav.users")}</a
                 >
             {/if}
             <a
                 class="menu-item"
                 role="menuitem"
                 href="{base}/account"
-                onclick={close}>Account</a
+                onclick={close}>{t("nav.account")}</a
             >
             <button class="menu-item danger" role="menuitem" onclick={logout}>
-                Sign out
+                {t("nav.signout")}
             </button>
         </div>
     {/if}

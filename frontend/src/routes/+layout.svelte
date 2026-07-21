@@ -3,7 +3,9 @@
     import { base } from "$lib/api.js";
     import Toaster from "$lib/components/Toaster.svelte";
     import ThemeToggle from "$lib/components/ThemeToggle.svelte";
+    import LangSwitcher from "$lib/components/LangSwitcher.svelte";
     import UserMenu from "$lib/components/UserMenu.svelte";
+    import { t } from "$lib/i18n.svelte.js";
     import { sessionState, loadSession } from "$lib/stores/session.svelte.js";
     import { initTheme } from "$lib/stores/theme.svelte.js";
 
@@ -33,9 +35,10 @@
             {#if sessionState.user}
                 <UserMenu />
             {:else if sessionState.loaded}
-                <a class="btn primary" href="{base}/signin">Sign in</a>
+                <a class="btn primary" href="{base}/signin">{t("nav.signin")}</a>
             {/if}
         {/if}
+        <LangSwitcher />
         <ThemeToggle />
     </div>
 </nav>

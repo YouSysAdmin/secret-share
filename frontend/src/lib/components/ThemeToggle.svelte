@@ -1,15 +1,14 @@
 <script>
     import { themeState, cycleTheme } from "$lib/stores/theme.svelte.js";
-
-    const labels = { system: "System", light: "Light", dark: "Dark" };
+    import { t } from "$lib/i18n.svelte.js";
 </script>
 
 <button
     type="button"
     class="theme-toggle"
     onclick={cycleTheme}
-    title={`Theme: ${labels[themeState.choice]} — click to change`}
-    aria-label={`Theme: ${labels[themeState.choice]}. Click to change.`}
+    title={t("theme.title", { name: t(`theme.${themeState.choice}`) })}
+    aria-label={t("theme.title", { name: t(`theme.${themeState.choice}`) })}
 >
     {#if themeState.choice === "system"}
         <!-- monitor -->
