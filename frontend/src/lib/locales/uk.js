@@ -40,6 +40,8 @@ export default {
   "create.secretLabel": "Секрет",
   "create.secretPlaceholder": "Вставте пароль, токен або будь-який текст…",
   "create.fileLabel": "Файл",
+  "create.chooseFile": "Вибрати файл…",
+  "create.changeFile": "Вибрати інший файл…",
   "create.fileHint":
     "Шифрується у вашому браузері - разом з назвою та вмістом. До {max}.",
   "create.lifetime": "Термін дії",

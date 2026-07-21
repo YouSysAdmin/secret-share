@@ -39,6 +39,8 @@ export default {
   "create.secretLabel": "Secret",
   "create.secretPlaceholder": "Paste a password, token, or any text…",
   "create.fileLabel": "File",
+  "create.chooseFile": "Choose a file…",
+  "create.changeFile": "Choose another file…",
   "create.fileHint":
     "Encrypted in your browser - name and content included. Up to {max}.",
   "create.lifetime": "Lifetime",

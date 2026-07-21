@@ -26,6 +26,7 @@
   let views = $state(1);
   let mode = $state("text"); // text | file
   let pickedFile = $state(null);
+  let fileEl = $state(null);
 
   const maxViews = $derived(cfg?.max_views > 1 ? cfg.max_views : 1);
   const filesEnabled = $derived(!!cfg?.files_enabled);
@@ -271,7 +272,16 @@
           {#if mode === "file" && filesEnabled}
             <div class="field">
               <label for="file">{t("create.fileLabel")}</label>
-              <input id="file" class="input" type="file" onchange={onFilePick}/>
+              <input
+                bind:this={fileEl}
+                id="file"
+                class="file-input"
+                type="file"
+                onchange={onFilePick}
+              />
+              <button type="button" class="btn file-select" onclick={() => fileEl?.click()}>
+                {pickedFile ? t("create.changeFile") : t("create.chooseFile")}
+              </button>
               <p class="muted hint">
                 {pickedFile
                   ? `${pickedFile.name} (${prettySize(pickedFile.size)})`
@@ -401,6 +411,27 @@
     outline-offset: -2px;
   }
 
+  .file-select {
+    margin-bottom: 10px;
+  }
+
+  .file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .file-input:focus-visible + .btn {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+  }
+
   .check {
     display: flex;
     align-items: center;
@@ -425,6 +456,7 @@
     border-radius: 8px;
     line-height: 0;
   }
+
 
   .qr :global(svg) {
     width: 192px;
