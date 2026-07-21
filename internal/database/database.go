@@ -28,4 +28,12 @@ type Database interface {
 	// GetSecretVisibilityBucketName returns the bucket/namespace recording which
 	// secrets are private (require a session to reveal).
 	GetSecretVisibilityBucketName() string
+
+	// GetSecretViewsBucketName returns the bucket/namespace holding multi-view
+	// budgets (secrets that may be revealed more than once).
+	GetSecretViewsBucketName() string
+
+	// GetFilesBucketName returns the bucket/namespace where encrypted file
+	// blobs live.
+	GetFilesBucketName() string
 }

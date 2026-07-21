@@ -103,6 +103,36 @@ export const secrets = {
     call(`/api/secrets/${encodeURIComponent(id)}/reveal`, { method: "POST" }),
 };
 
+// Encrypted files. The create body is the raw opaque blob (not JSON), so the
+// options ride headers; reveal returns raw bytes.
+export const files = {
+  create: async (blob, { ttl, private: priv } = {}) => {
+    const headers = { "Content-Type": "application/octet-stream" };
+    if (ttl) headers["X-Share-TTL"] = ttl;
+    if (priv) headers["X-Share-Private"] = "true";
+    const res = await fetch(base + "/api/files", {
+      credentials: "same-origin",
+      method: "POST",
+      headers,
+      body: blob,
+    });
+    if (redirectOn401(res, "/api/files")) throw new Error("redirecting to sign-in");
+    if (!res.ok) throw await errorFromResponse(res);
+    return JSON.parse(await res.text());
+  },
+  meta: (id) => call(`/api/files/${encodeURIComponent(id)}/meta`),
+  reveal: async (id) => {
+    const path = `/api/files/${encodeURIComponent(id)}/reveal`;
+    const res = await fetch(base + path, {
+      credentials: "same-origin",
+      method: "POST",
+    });
+    if (redirectOn401(res, path)) throw new Error("redirecting to sign-in");
+    if (!res.ok) throw await errorFromResponse(res);
+    return new Uint8Array(await res.arrayBuffer());
+  },
+};
+
 // --- private-mode (auth) endpoints ---
 
 export const auth = {

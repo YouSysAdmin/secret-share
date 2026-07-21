@@ -13,6 +13,7 @@ import (
 	"github.com/YouSysAdmin/secret-share/internal/core/env"
 	"github.com/YouSysAdmin/secret-share/internal/core/response"
 	"github.com/YouSysAdmin/secret-share/internal/core/session"
+	"github.com/YouSysAdmin/secret-share/internal/domain/files"
 	"github.com/YouSysAdmin/secret-share/internal/domain/store"
 	"github.com/YouSysAdmin/secret-share/internal/models/user"
 )
@@ -124,6 +125,36 @@ func captureVisibility(rt *env.Runtime, st *store.Store) fiber.Handler {
 		}
 		if err := st.Visibility.SetPrivate(c.UserContext(), resp.ID); err != nil {
 			rt.Log.Error("failed to record secret visibility", "id", resp.ID, "err", err)
+		}
+		return nil
+	}
+}
+
+// captureFileVisibility is captureVisibility's counterpart for the file-create
+// route, where the body is the raw encrypted blob: the private flag rides the
+// X-Share-Private header instead of a JSON field. Same ordering guarantee (the
+// record is written before the response is flushed) and same best-effort
+// failure mode (the file stays public).
+func captureFileVisibility(rt *env.Runtime, st *store.Store) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		wantPrivate := strings.EqualFold(strings.TrimSpace(c.Get(files.PrivateHeader)), "true")
+		if err := c.Next(); err != nil {
+			return err
+		}
+		if !rt.Config.Auth.Enabled || !wantPrivate {
+			return nil
+		}
+		if code := c.Response().StatusCode(); code < 200 || code >= 300 {
+			return nil
+		}
+		var resp struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(c.Response().Body(), &resp); err != nil || resp.ID == "" {
+			return nil
+		}
+		if err := st.Visibility.SetPrivate(c.UserContext(), resp.ID); err != nil {
+			rt.Log.Error("failed to record file visibility", "id", resp.ID, "err", err)
 		}
 		return nil
 	}

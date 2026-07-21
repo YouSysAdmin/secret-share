@@ -24,6 +24,29 @@ type Config struct {
 	Secrets  SecretsConfig  `mapstructure:"secrets"`
 	Auth     AuthConfig     `mapstructure:"auth"`
 	Logging  LoggingConfig  `mapstructure:"logging"`
+	Metrics  MetricsConfig  `mapstructure:"metrics"`
+	Files    FilesConfig    `mapstructure:"files"`
+}
+
+// FilesConfig governs encrypted file sharing. Files follow the same
+// zero-knowledge model as text secrets (the browser encrypts filename +
+// content into one opaque blob) and the same lifetime rules (secrets.max_ttl /
+// default_ttl), but are strictly one-time.
+type FilesConfig struct {
+	// Enabled turns the file-sharing endpoints (and UI) on. Default true.
+	Enabled bool `mapstructure:"enabled"`
+	// MaxSizeBytes caps the stored ciphertext per file. The HTTP body limit is
+	// raised above this automatically. Default 5242880 (5 MiB).
+	MaxSizeBytes int `mapstructure:"max_size_bytes"`
+}
+
+// MetricsConfig exposes Prometheus metrics on a separate listener so the
+// scrape endpoint is never reachable through the public address.
+type MetricsConfig struct {
+	// Enabled turns the /metrics endpoint on. Default false.
+	Enabled bool `mapstructure:"enabled"`
+	// Addr is the metrics listen address. Default "127.0.0.1:9091".
+	Addr string `mapstructure:"addr"`
 }
 
 type ServerConfig struct {
@@ -63,6 +86,10 @@ type SecretsConfig struct {
 	DefaultTTL string `mapstructure:"default_ttl"`
 	// AllowedTTLs are the preset lifetime options surfaced to the UI (Go durations).
 	AllowedTTLs []string `mapstructure:"allowed_ttls"`
+	// MaxViews caps how many times a single secret may be revealed. Every secret
+	// still defaults to one view, a creator can opt in to more, up to this ceiling.
+	// Set 1 to disable multi-view entirely. Default 10.
+	MaxViews int `mapstructure:"max_views"`
 }
 
 type LoggingConfig struct {
@@ -163,6 +190,7 @@ var configKeys = []string{
 	"secrets.max_ttl",
 	"secrets.default_ttl",
 	"secrets.allowed_ttls",
+	"secrets.max_views",
 	// Auth scalar keys. The OIDC provider list (auth.oidc) is a struct slice
 	// Viper can't BindEnv; it's loaded separately from SHARE_AUTH_OIDC_PROVIDERS +
 	// SHARE_AUTH_OIDC_<ID>_* (see oidcProvidersFromEnv) or from the config file.
@@ -177,6 +205,10 @@ var configKeys = []string{
 	"logging.format",
 	"logging.output",
 	"logging.color",
+	"metrics.enabled",
+	"metrics.addr",
+	"files.enabled",
+	"files.max_size_bytes",
 }
 
 // Load reads YAML at path (or ./secret-share.yaml when empty), merges
@@ -205,6 +237,7 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("secrets.max_ttl", "168h")
 	v.SetDefault("secrets.default_ttl", "24h")
 	v.SetDefault("secrets.allowed_ttls", []string{"5m", "1h", "24h", "168h"})
+	v.SetDefault("secrets.max_views", 10)
 	v.SetDefault("auth.enabled", false)
 	v.SetDefault("auth.gate", "create")
 	v.SetDefault("auth.session_ttl", "12h")
@@ -212,6 +245,10 @@ func Load(path string) (*Config, error) {
 	v.SetDefault("logging.level", "info")
 	v.SetDefault("logging.format", "json")
 	v.SetDefault("logging.output", "stdout")
+	v.SetDefault("metrics.enabled", false)
+	v.SetDefault("metrics.addr", "127.0.0.1:9091")
+	v.SetDefault("files.enabled", true)
+	v.SetDefault("files.max_size_bytes", 5*1024*1024)
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); !ok {
@@ -329,6 +366,10 @@ func (c *Config) Validate() error {
 	if c.Secrets.MaxSizeBytes <= 0 {
 		c.Secrets.MaxSizeBytes = 65536
 	}
+	// Normalize like MaxSizeBytes: below 1 falls back to 1 (multi-view disabled).
+	if c.Secrets.MaxViews < 1 {
+		c.Secrets.MaxViews = 1
+	}
 	maxTTL, err := parseRequiredDuration("secrets.max_ttl", c.Secrets.MaxTTL)
 	if err != nil {
 		return err
@@ -352,6 +393,14 @@ func (c *Config) Validate() error {
 
 	if err := c.validateAuth(); err != nil {
 		return err
+	}
+
+	if c.Metrics.Enabled && strings.TrimSpace(c.Metrics.Addr) == "" {
+		return fmt.Errorf("metrics.addr must be set when metrics.enabled is true")
+	}
+
+	if c.Files.MaxSizeBytes <= 0 {
+		c.Files.MaxSizeBytes = 5 * 1024 * 1024
 	}
 	return nil
 }
