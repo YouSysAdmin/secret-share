@@ -1,0 +1,40 @@
+# Minimal single-node deployment. Plain HTTP on 127.0.0.1:3000 - put a
+# TLS-terminating reverse proxy in front (and set SHARE_SERVER_BEHIND_TLS_PROXY
+# plus SHARE_SERVER_TRUSTED_PROXIES), or switch the built-in TLS on via
+# SHARE_SERVER_TLS_MODE=self|manual|acme.
+#
+# The image runs as nonroot (uid 65532) and the bbolt file lives on the "data"
+# volume, the one-shot init service chowns the volume so the server can write it.
+
+services:
+  init-data:
+    image: busybox:1.36
+    command: ["chown", "-R", "65532:65532", "/data"]
+    volumes:
+      - data:/data
+
+  secret-share:
+    image: ghcr.io/yousysadmin/secret-share:latest
+    restart: unless-stopped
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      SHARE_DATABASE_PATH: /data/secret-share.db
+      # Private mode (uncomment to require login for creating secrets):
+      # SHARE_AUTH_ENABLED: "true"
+      # SHARE_AUTH_SESSION_SECRET: "change-me-to-a-random-32+-char-string"
+      # SHARE_AUTH_BOOTSTRAP_ADMIN_EMAIL: "admin@example.com"
+      # SHARE_AUTH_BOOTSTRAP_ADMIN_PASSWORD: "change-me"
+      # Prometheus metrics on a separate, non-published port:
+      # SHARE_METRICS_ENABLED: "true"
+      # SHARE_METRICS_ADDR: "0.0.0.0:9091"
+    volumes:
+      - data:/data
+    # NOTE: no container healthcheck - the runtime image is distroless (no
+    # shell/curl). Probe GET /healthz from the outside instead.
+
+volumes:
+  data:
