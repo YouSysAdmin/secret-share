@@ -1,0 +1,89 @@
+# Minimal Kubernetes deployment.
+#
+# bbolt is an embedded single-writer store, so this MUST run with exactly one
+# replica and strategy Recreate (a rolling update would briefly run two pods
+# fighting over the same file lock).
+#
+# TLS: terminate at your ingress controller and set
+# SHARE_SERVER_BEHIND_TLS_PROXY=true + SHARE_SERVER_TRUSTED_PROXIES to the
+# ingress pod CIDR, or use the built-in ACME/manual modes instead.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secret-share
+  labels:
+    app: secret-share
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: secret-share
+  template:
+    metadata:
+      labels:
+        app: secret-share
+      # Uncomment when SHARE_METRICS_ENABLED is on:
+      # annotations:
+      #   prometheus.io/scrape: "true"
+      #   prometheus.io/port: "9091"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532 # makes the PVC mount writable for the nonroot image user
+      containers:
+        - name: secret-share
+          image: ghcr.io/yousysadmin/secret-share:latest
+          ports:
+            - name: http
+              containerPort: 3000
+            # - name: metrics
+            #   containerPort: 9091
+          env:
+            - name: SHARE_DATABASE_PATH
+              value: /data/secret-share.db
+            # Private mode: keep the session secret in a real Secret.
+            # - name: SHARE_AUTH_ENABLED
+            #   value: "true"
+            # - name: SHARE_AUTH_SESSION_SECRET
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: secret-share
+            #       key: session-secret
+            # - name: SHARE_METRICS_ENABLED
+            #   value: "true"
+            # - name: SHARE_METRICS_ADDR
+            #   value: "0.0.0.0:9091"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: secret-share-data
