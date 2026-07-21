@@ -31,8 +31,13 @@ func newTestServer(t *testing.T, auth env.AuthConfig) (*Server, *env.Runtime, *s
 			MaxTTL:       "168h",
 			DefaultTTL:   "24h",
 			AllowedTTLs:  []string{"24h"},
+			MaxViews:     10,
 		},
 		Auth: auth,
+		// Metrics on so every server test also exercises the middleware (the
+		// listener itself only starts in Start, never in tests).
+		Metrics: env.MetricsConfig{Enabled: true},
+		Files:   env.FilesConfig{Enabled: true, MaxSizeBytes: 1024 * 1024},
 	}
 	rt := &env.Runtime{
 		Config:        cfg,

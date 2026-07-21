@@ -22,9 +22,11 @@ var _ database.Database = (*Store)(nil)
 // Bucket names. Domain stores reach these through the database.Database interface
 // rather than the vars directly.
 var (
-	bucketSecrets   = []byte("secrets")
-	bucketUsers     = []byte("users")
-	bucketSecretVis = []byte("secret_visibility")
+	bucketSecrets     = []byte("secrets")
+	bucketUsers       = []byte("users")
+	bucketSecretVis   = []byte("secret_visibility")
+	bucketSecretViews = []byte("secret_views")
+	bucketFiles       = []byte("files")
 )
 
 // Store is the boltkv backend handle: wraps the bbolt DB and implements
@@ -48,7 +50,7 @@ func Open(path string) (*Store, error) {
 		return nil, fmt.Errorf("open bolt db %s: %w", path, err)
 	}
 	err = db.Update(func(tx *bbolt.Tx) error {
-		for _, name := range [][]byte{bucketSecrets, bucketUsers, bucketSecretVis} {
+		for _, name := range [][]byte{bucketSecrets, bucketUsers, bucketSecretVis, bucketSecretViews, bucketFiles} {
 			if _, err := tx.CreateBucketIfNotExists(name); err != nil {
 				return err
 			}
@@ -109,3 +111,9 @@ func (s *Store) GetUsersBucketName() string { return string(bucketUsers) }
 
 // GetSecretVisibilityBucketName satisfies the database.Database interface.
 func (s *Store) GetSecretVisibilityBucketName() string { return string(bucketSecretVis) }
+
+// GetSecretViewsBucketName satisfies the database.Database interface.
+func (s *Store) GetSecretViewsBucketName() string { return string(bucketSecretViews) }
+
+// GetFilesBucketName satisfies the database.Database interface.
+func (s *Store) GetFilesBucketName() string { return string(bucketFiles) }

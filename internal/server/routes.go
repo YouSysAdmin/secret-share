@@ -13,6 +13,7 @@ import (
 	"github.com/YouSysAdmin/secret-share/internal/core/env"
 	"github.com/YouSysAdmin/secret-share/internal/core/response"
 	"github.com/YouSysAdmin/secret-share/internal/domain/auth"
+	"github.com/YouSysAdmin/secret-share/internal/domain/files"
 	"github.com/YouSysAdmin/secret-share/internal/domain/secrets"
 	"github.com/YouSysAdmin/secret-share/internal/domain/store"
 	"github.com/YouSysAdmin/secret-share/internal/domain/users"
@@ -40,12 +41,15 @@ func registerRoutes(app *fiber.App, rt *env.Runtime, st *store.Store) {
 	// form can render presets and decide whether to prompt sign-in.
 	api.Get("/config", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
-			"allowed_ttls":   rt.Config.Secrets.AllowedTTLs,
-			"default_ttl":    rt.Config.Secrets.DefaultTTL,
-			"max_ttl":        rt.Config.Secrets.MaxTTL,
-			"max_size_bytes": rt.Config.Secrets.MaxSizeBytes,
-			"auth_enabled":   authEnabled,
-			"gate":           rt.Config.Auth.Gate,
+			"allowed_ttls":         rt.Config.Secrets.AllowedTTLs,
+			"default_ttl":          rt.Config.Secrets.DefaultTTL,
+			"max_ttl":              rt.Config.Secrets.MaxTTL,
+			"max_size_bytes":       rt.Config.Secrets.MaxSizeBytes,
+			"max_views":            maxViews(rt),
+			"files_enabled":        rt.Config.Files.Enabled,
+			"files_max_size_bytes": rt.Config.Files.MaxSizeBytes,
+			"auth_enabled":         authEnabled,
+			"gate":                 rt.Config.Auth.Gate,
 		})
 	})
 
@@ -77,10 +81,25 @@ func registerRoutes(app *fiber.App, rt *env.Runtime, st *store.Store) {
 	//   - meta/reveal: revealGate requires a session when gate=="all" OR this
 	//              specific secret is private; otherwise it stays open so an external
 	//              recipient with just the link can preview/reveal it.
+	// Multi-view (views=N) is layered the same way as visibility: captureViews
+	// records the budget at create; multiViewReveal serves non-final views from
+	// the side record (after revealGate, so auth still applies, and before
+	// dropVisibilityOnBurn, so visibility survives until the real burn).
 	sh := &secrets.Handler{Runtime: rt, Store: st}
-	api.Post("/secrets", rateLimiter(), authGate, captureVisibility(rt, st), sh.Create)
-	api.Get("/secrets/:id/meta", revealGate(rt, st), sh.Meta)
-	api.Post("/secrets/:id/reveal", rateLimiter(), revealGate(rt, st), dropVisibilityOnBurn(rt, st), sh.Reveal)
+	api.Post("/secrets", rateLimiter(), authGate, captureVisibility(rt, st), captureViews(rt, st), sh.Create)
+	api.Get("/secrets/:id/meta", revealGate(rt, st), annotateViewsMeta(st), sh.Meta)
+	api.Post("/secrets/:id/reveal", rateLimiter(), revealGate(rt, st), multiViewReveal(st), dropVisibilityOnBurn(rt, st), sh.Reveal)
+
+	// Encrypted files: same zero-knowledge + burn-on-reveal model as secrets,
+	// same gates. The creation body is the raw blob, so the private flag rides a
+	// header (captureFileVisibility) instead of a JSON field. Files are strictly
+	// one-time (no multi-view - a view budget would have to duplicate the blob).
+	if rt.Config.Files.Enabled {
+		fh := &files.Handler{Runtime: rt, Store: st}
+		api.Post("/files", rateLimiter(), authGate, captureFileVisibility(rt, st), fh.Create)
+		api.Get("/files/:id/meta", revealGate(rt, st), fh.Meta)
+		api.Post("/files/:id/reveal", rateLimiter(), revealGate(rt, st), dropVisibilityOnBurn(rt, st), fh.Reveal)
+	}
 
 	// Self-service account + admin management. Only mounted (and only meaningful)
 	// when auth is enabled, since they all require a session.

@@ -15,6 +15,7 @@ import (
 	"github.com/YouSysAdmin/secret-share/internal/core/env"
 	"github.com/YouSysAdmin/secret-share/internal/core/logger"
 	paoidc "github.com/YouSysAdmin/secret-share/internal/core/oidc"
+	"github.com/YouSysAdmin/secret-share/internal/domain/files"
 	"github.com/YouSysAdmin/secret-share/internal/domain/secrets"
 	"github.com/YouSysAdmin/secret-share/internal/domain/store"
 	"github.com/YouSysAdmin/secret-share/internal/models/user"
@@ -91,9 +92,15 @@ func runServe(cmd *cobra.Command, _ []string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	secrets.StartSweeper(ctx, st, cfg.SweepIntervalDuration(), log)
+	if cfg.Files.Enabled {
+		files.StartSweeper(ctx, st, cfg.SweepIntervalDuration(), log)
+	}
 	// Drop visibility records left behind by private secrets that expired without
 	// being revealed (a revealed secret drops its own record on burn).
 	startVisibilitySweeper(ctx, st, cfg.SweepIntervalDuration(), log)
+	// Same cleanup for multi-view budgets whose secret expired before the views
+	// were used up (a fully consumed budget deletes its own record).
+	startViewsSweeper(ctx, st, cfg.SweepIntervalDuration(), log)
 
 	srv, err := server.New(server.Options{Runtime: rt, Store: st})
 	if err != nil {
@@ -211,6 +218,42 @@ func startVisibilitySweeper(ctx context.Context, st *store.Store, interval time.
 				}
 				if dropped > 0 {
 					log.Debug("visibility sweep: dropped orphan records", "count", dropped)
+				}
+			}
+		}
+	}()
+}
+
+// startViewsSweeper periodically drops multi-view budget records whose secret
+// is gone (expired or burned), so the views bucket can't grow without bound.
+func startViewsSweeper(ctx context.Context, st *store.Store, interval time.Duration, log *slog.Logger) {
+	go func() {
+		t := time.NewTicker(interval)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				ids, err := st.Views.List(ctx)
+				if err != nil {
+					log.Warn("views sweep: list failed", "err", err)
+					continue
+				}
+				dropped := 0
+				for _, id := range ids {
+					s, err := st.Secrets.GetMeta(ctx, id)
+					if err != nil {
+						continue
+					}
+					if s == nil {
+						if err := st.Views.Delete(ctx, id); err == nil {
+							dropped++
+						}
+					}
+				}
+				if dropped > 0 {
+					log.Debug("views sweep: dropped orphan records", "count", dropped)
 				}
 			}
 		}
