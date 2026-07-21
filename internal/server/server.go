@@ -3,9 +3,11 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"path"
 	"runtime/debug"
 	"strings"
@@ -20,9 +22,11 @@ import (
 )
 
 type Server struct {
-	app    *fiber.App
-	rt     *env.Runtime
-	tlsCfg *tls.Config // nil = serve plain HTTP
+	app        *fiber.App
+	rt         *env.Runtime
+	tlsCfg     *tls.Config // nil = serve plain HTTP
+	metrics    *httpMetrics
+	metricsSrv *http.Server // nil until Start (and when metrics are disabled)
 }
 
 type Options struct {
@@ -61,6 +65,12 @@ func New(opts Options) (*Server, error) {
 	}
 
 	fiberCfg := baseFiberConfig()
+	// File uploads can exceed the JSON-API headroom: lift the global body limit
+	// to the configured file ceiling plus slack (the per-request file size is
+	// still enforced exactly in the files handler).
+	if fc := opts.Runtime.Config.Files; fc.Enabled && fc.MaxSizeBytes+1024*1024 > fiberCfg.BodyLimit {
+		fiberCfg.BodyLimit = fc.MaxSizeBytes + 1024*1024
+	}
 	if proxies := opts.Runtime.Config.Server.TrustedProxies; len(proxies) > 0 {
 		fiberCfg.EnableTrustedProxyCheck = true
 		fiberCfg.TrustedProxies = proxies
@@ -69,12 +79,17 @@ func New(opts Options) (*Server, error) {
 
 	app := fiber.New(fiberCfg)
 	app.Use(safeRecover)
+	var m *httpMetrics
+	if opts.Runtime.Config.Metrics.Enabled {
+		m = newHTTPMetrics()
+		app.Use(m.middleware())
+	}
 	app.Use(securityHeaders(opts.Runtime.Config.Server.BehindTLSProxy))
 	app.Use(defaultNoCache)
 	app.Use(accessLog(opts.Runtime.Log))
 
 	registerRoutes(app, opts.Runtime, opts.Store)
-	return &Server{app: app, rt: opts.Runtime, tlsCfg: tlsCfg}, nil
+	return &Server{app: app, rt: opts.Runtime, tlsCfg: tlsCfg, metrics: m}, nil
 }
 
 // App exposes the underlying Fiber app (for tests).
@@ -82,6 +97,9 @@ func (s *Server) App() *fiber.App { return s.app }
 
 func (s *Server) Start() error {
 	addr := s.rt.Config.Server.Addr
+	if s.metrics != nil {
+		s.metricsSrv = s.metrics.startServer(s.rt.Config.Metrics.Addr, s.rt.Log)
+	}
 	if s.tlsCfg != nil {
 		ln, err := tls.Listen("tcp", addr, s.tlsCfg)
 		if err != nil {
@@ -94,9 +112,18 @@ func (s *Server) Start() error {
 	return s.app.Listen(addr)
 }
 
-// Shutdown drains the Fiber app, bounded so a lingering connection can't hang
-// process exit forever.
-func (s *Server) Shutdown() error { return s.app.ShutdownWithTimeout(10 * time.Second) }
+// Shutdown drains the Fiber app (and the metrics listener), bounded so a
+// lingering connection can't hang process exit forever.
+func (s *Server) Shutdown() error {
+	if s.metricsSrv != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := s.metricsSrv.Shutdown(ctx); err != nil {
+			s.rt.Log.Warn("metrics server shutdown", "err", err)
+		}
+	}
+	return s.app.ShutdownWithTimeout(10 * time.Second)
+}
 
 // safeRecover catches panics, logs them with a stack, and returns a generic 500
 // (no internal-state leakage).
