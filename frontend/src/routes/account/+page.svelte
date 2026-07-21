@@ -3,6 +3,7 @@
   import {toast} from "$lib/stores/toast.svelte.js";
   import * as webauthn from "$lib/utils/webauthn.js";
   import {loadSession, refreshSession, sessionState,} from "$lib/stores/session.svelte.js";
+  import {t} from "$lib/i18n.svelte.js";
 
   const passkeySupported = webauthn.supported();
 
@@ -58,7 +59,7 @@
     try {
       await account.changePassword(curPw, newPw);
       curPw = newPw = "";
-      toast.success("Password changed.");
+      toast.success(t("account.pwChanged"));
     } catch (err) {
       toast.error(err.message);
     }
@@ -70,7 +71,7 @@
       const r = await account.changeEmail(newEmail, emailPw);
       emailPw = "";
       newEmail = "";
-      toast.success(`Email changed to ${r.email}.`);
+      toast.success(t("account.emailChanged", {email: r.email}));
       await refreshSession();
     } catch (err) {
       toast.error(err.message);
@@ -96,7 +97,7 @@
       recoveryCodes = r.recovery_codes || [];
       setup = null;
       await refreshSession();
-      toast.success("Two-factor authentication enabled.");
+      toast.success(t("account.twofaEnabled"));
     } catch (err) {
       toast.error(err.message);
     }
@@ -109,7 +110,7 @@
       twofaPw = "";
       recoveryCodes = null;
       await refreshSession();
-      toast.success("Two-factor authentication disabled.");
+      toast.success(t("account.twofaDisabled"));
     } catch (err) {
       toast.error(err.message);
     }
@@ -121,7 +122,7 @@
       const r = await twofa.regenerateRecoveryCodes(twofaPw);
       twofaPw = "";
       recoveryCodes = r.recovery_codes || [];
-      toast.success("New recovery codes generated.");
+      toast.success(t("account.newCodes"));
     } catch (err) {
       toast.error(err.message);
     }
@@ -136,7 +137,7 @@
       await passkey.registerFinish(cred, pkName.trim() || "passkey");
       pkPw = "";
       pkName = "";
-      toast.success("Passkey added.");
+      toast.success(t("account.pkAdded"));
       await refreshPasskeys();
     } catch (err) {
       if (err?.name !== "NotAllowedError") toast.error(err.message);
@@ -146,11 +147,11 @@
   }
 
   async function removePasskey(id) {
-    const pw = window.prompt("Confirm your password to remove this passkey:");
+    const pw = window.prompt(t("account.pkRemovePrompt"));
     if (!pw) return;
     try {
       await passkey.remove(id, pw);
-      toast.success("Passkey removed.");
+      toast.success(t("account.pkRemoved"));
       await refreshPasskeys();
     } catch (err) {
       toast.error(err.message);
@@ -166,9 +167,9 @@
   async function copyCodes() {
     try {
       await navigator.clipboard.writeText((recoveryCodes || []).join("\n"));
-      toast.success("Recovery codes copied.");
+      toast.success(t("account.codesCopied"));
     } catch {
-      toast.error("Copy failed - select and copy manually.");
+      toast.error(t("common.copyFailed"));
     }
   }
 </script>
@@ -176,76 +177,74 @@
 <div class="container">
   {#if ready}
     <div class="card">
-      <h2>Account</h2>
+      <h2>{t("account.title")}</h2>
       <p class="muted">
-        Signed in as <code>{sessionState.user?.email}</code>
+        {t("account.signedInAs")} <code>{sessionState.user?.email}</code>
         ({sessionState.user?.role}).
       </p>
     </div>
 
     {#if isLocal}
       <div class="card">
-        <h3>Change password</h3>
+        <h3>{t("account.changePassword")}</h3>
         <form onsubmit={doChangePassword}>
           <div class="field">
-            <label for="cur">Current password</label>
+            <label for="cur">{t("account.currentPassword")}</label>
             <input id="cur" class="input" type="password" bind:value={curPw}/>
           </div>
           <div class="field">
-            <label for="new">New password</label>
+            <label for="new">{t("account.newPassword")}</label>
             <input id="new" class="input" type="password" bind:value={newPw}/>
           </div>
           <button class="btn primary" type="submit" disabled={!curPw || !newPw}>
-            Update password
+            {t("account.updatePassword")}
           </button>
         </form>
       </div>
 
       <div class="card">
-        <h3>Change email</h3>
+        <h3>{t("account.changeEmail")}</h3>
         <form onsubmit={doChangeEmail}>
           <div class="field">
-            <label for="ne">New email</label>
+            <label for="ne">{t("account.newEmail")}</label>
             <input id="ne" class="input" type="email" bind:value={newEmail}/>
           </div>
           <div class="field">
-            <label for="ep">Current password</label>
+            <label for="ep">{t("account.currentPassword")}</label>
             <input id="ep" class="input" type="password" bind:value={emailPw}/>
           </div>
           <button class="btn primary" type="submit" disabled={!newEmail || !emailPw}>
-            Update email
+            {t("account.updateEmail")}
           </button>
         </form>
       </div>
 
       <div class="card">
-        <h3>Two-factor authentication</h3>
+        <h3>{t("account.twofa")}</h3>
         {#if recoveryCodes}
           <div class="banner ok">
-            Save these one-time recovery codes somewhere safe - each works
-            once if you lose your authenticator.
+            {t("account.recoverySave")}
           </div>
           <pre class="codes mono">{recoveryCodes.join("\n")}</pre>
-          <button class="btn" onclick={copyCodes}>Copy codes</button>
+          <button class="btn" onclick={copyCodes}>{t("account.copyCodes")}</button>
         {:else if setup}
           <p class="muted">
-            Scan this QR code with your authenticator app (or enter the
-            secret manually), then enter the 6-digit code to confirm.
+            {t("account.scanQR")}
           </p>
           <img
             class="qr"
             src={"data:image/png;base64," + setup.qr_png_base64}
-            alt="TOTP QR code"
+            alt={t("account.totpQRAlt")}
             width="200"
             height="200"
           />
           <div class="field">
-            <span class="muted">Secret (manual entry)</span>
+            <span class="muted">{t("account.secretManual")}</span>
             <code class="mono">{setup.secret}</code>
           </div>
           <form onsubmit={confirmTwoFA}>
             <div class="field">
-              <label for="cc">Code</label>
+              <label for="cc">{t("account.code")}</label>
               <input
                 id="cc"
                 class="input mono"
@@ -256,39 +255,38 @@
               />
             </div>
             <button class="btn primary" type="submit" disabled={!confirmCode.trim()}>
-              Enable 2FA
+              {t("account.enable2fa")}
             </button>
           </form>
         {:else if sessionState.user?.totp_enabled}
           <div class="banner ok">
-            Your account is protected by an authenticator app.
+            {t("account.protected")}
           </div>
           <form onsubmit={disableTwoFA}>
             <div class="field">
-              <label for="tp">Confirm password</label>
+              <label for="tp">{t("account.confirmPassword")}</label>
               <input id="tp" class="input" type="password" bind:value={twofaPw}/>
             </div>
             <div class="row">
               <button class="btn" onclick={regenCodes} disabled={!twofaPw}>
-                Regenerate recovery codes
+                {t("account.regenCodes")}
               </button>
               <button class="btn danger" type="submit" disabled={!twofaPw}>
-                Disable 2FA
+                {t("account.disable2fa")}
               </button>
             </div>
           </form>
         {:else}
           <p class="muted">
-            Add a second factor with an authenticator app (local password
-            accounts only).
+            {t("account.addFactor")}
           </p>
           <form onsubmit={startTwoFA}>
             <div class="field">
-              <label for="t2p">Confirm password</label>
+              <label for="t2p">{t("account.confirmPassword")}</label>
               <input id="t2p" class="input" type="password" bind:value={twofaPw}/>
             </div>
             <button class="btn primary" type="submit" disabled={!twofaPw}>
-              Set up 2FA
+              {t("account.setup2fa")}
             </button>
           </form>
         {/if}
@@ -296,15 +294,15 @@
 
       {#if passkeySupported}
         <div class="card">
-          <h3>Passkeys</h3>
+          <h3>{t("account.passkeys")}</h3>
           {#if passkeys.length === 0}
-            <p class="muted">No passkeys yet.</p>
+            <p class="muted">{t("account.noPasskeys")}</p>
           {:else}
             <table class="tbl">
               <thead>
               <tr>
-                <th>Name</th>
-                <th>Added</th>
+                <th>{t("account.colName")}</th>
+                <th>{t("account.colAdded")}</th>
                 <th></th>
               </tr>
               </thead>
@@ -318,7 +316,7 @@
                       class="btn danger"
                       onclick={() => removePasskey(pk.id)}
                     >
-                      Remove
+                      {t("account.remove")}
                     </button>
                   </td>
                 </tr>
@@ -328,15 +326,15 @@
           {/if}
           <form onsubmit={addPasskey} style="margin-top:12px">
             <div class="field">
-              <label for="pkn">Name (to recognize this device)</label>
-              <input id="pkn" class="input" bind:value={pkName} placeholder="e.g. MacBook Touch ID"/>
+              <label for="pkn">{t("account.pkNameLabel")}</label>
+              <input id="pkn" class="input" bind:value={pkName} placeholder={t("account.pkNamePlaceholder")}/>
             </div>
             <div class="field">
-              <label for="pkp">Confirm password</label>
+              <label for="pkp">{t("account.confirmPassword")}</label>
               <input id="pkp" class="input" type="password" bind:value={pkPw}/>
             </div>
             <button class="btn primary" type="submit" disabled={pkBusy || !pkPw}>
-              {pkBusy ? "Waiting for authenticator…" : "Add passkey"}
+              {pkBusy ? t("account.pkBusy") : t("account.addPasskey")}
             </button>
           </form>
         </div>

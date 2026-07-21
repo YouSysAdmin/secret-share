@@ -1,6 +1,7 @@
 <script>
     import { base, auth, passkey, takeReturnTo } from "$lib/api.js";
     import * as webauthn from "$lib/utils/webauthn.js";
+    import { t } from "$lib/i18n.svelte.js";
 
     let info = $state(null); // { auth_enabled, password_enabled, passkey_enabled, oidc_providers, gate }
     let email = $state("");
@@ -11,13 +12,13 @@
     let pkBusy = $state(false);
     let error = $state(null);
 
-    const ssoErrors = {
-        sso_idp_error: "The identity provider reported an error.",
-        sso_bad_callback: "The sign-in response was incomplete. Try again.",
-        sso_state_missing: "Your sign-in attempt expired. Try again.",
-        sso_token_invalid: "Could not verify the sign-in. Try again.",
-        sso_access_denied: "Your account isn't allowed to sign in here.",
-        sso_internal: "Something went wrong completing sign-in.",
+    const ssoErrorKeys = {
+        sso_idp_error: "signin.ssoIdpError",
+        sso_bad_callback: "signin.ssoBadCallback",
+        sso_state_missing: "signin.ssoStateMissing",
+        sso_token_invalid: "signin.ssoTokenInvalid",
+        sso_access_denied: "signin.ssoAccessDenied",
+        sso_internal: "signin.ssoInternal",
     };
 
     const passkeySupported = webauthn.supported();
@@ -37,7 +38,7 @@
 
     $effect(() => {
         const err = new URLSearchParams(window.location.search).get("err");
-        if (err) error = ssoErrors[err] || "Sign-in failed.";
+        if (err) error = t(ssoErrorKeys[err] || "signin.failed");
         // Already signed in (incl. the OIDC return, which redirects here)? Go where
         // they were headed.
         auth.me().then((r) => {
@@ -81,7 +82,7 @@
             }
             goNext();
         } catch (err) {
-            error = err.message || "Invalid email or password.";
+            error = err.message || t("signin.invalidCreds");
         } finally {
             pwBusy = false;
         }
@@ -90,7 +91,7 @@
 
 <div class="container">
     <div class="card signin">
-        <h2>Sign in</h2>
+        <h2>{t("signin.title")}</h2>
 
         {#if error}
             <div class="banner err">{error}</div>
@@ -103,12 +104,12 @@
                     type="button"
                     onclick={() => startOIDC(p.id)}
                 >
-                    Sign in with {p.label}
+                    {t("signin.ssoWith", { label: p.label })}
                 </button>
             {/each}
 
             {#if (info.oidc_providers?.length ?? 0) > 0 && (info.password_enabled || info.passkey_enabled)}
-                <div class="divider"><span>or</span></div>
+                <div class="divider"><span>{t("signin.or")}</span></div>
             {/if}
 
             {#if info.passkey_enabled && passkeySupported && !mfaStep}
@@ -118,7 +119,7 @@
                     onclick={startPasskey}
                     disabled={pkBusy}
                 >
-                    {pkBusy ? "Waiting for passkey…" : "Sign in with a passkey"}
+                    {pkBusy ? t("signin.passkeyBusy") : t("signin.passkey")}
                 </button>
             {/if}
 
@@ -126,7 +127,7 @@
                 <form onsubmit={submitPassword}>
                     {#if !mfaStep}
                         <div class="field">
-                            <label for="email">Email</label>
+                            <label for="email">{t("signin.email")}</label>
                             <input
                                 id="email"
                                 class="input"
@@ -137,7 +138,7 @@
                             />
                         </div>
                         <div class="field">
-                            <label for="password">Password</label>
+                            <label for="password">{t("signin.password")}</label>
                             <input
                                 id="password"
                                 class="input"
@@ -152,15 +153,14 @@
                             type="submit"
                             disabled={pwBusy || !email || !password}
                         >
-                            {pwBusy ? "Signing in…" : "Sign in"}
+                            {pwBusy ? t("signin.submitBusy") : t("signin.submit")}
                         </button>
                     {:else}
                         <p class="muted">
-                            Enter the 6-digit code from your authenticator app, or
-                            a recovery code.
+                            {t("signin.mfaHint")}
                         </p>
                         <div class="field">
-                            <label for="code">Authentication code</label>
+                            <label for="code">{t("signin.codeLabel")}</label>
                             <input
                                 id="code"
                                 class="input mono"
@@ -176,14 +176,14 @@
                             type="submit"
                             disabled={pwBusy || !code}
                         >
-                            {pwBusy ? "Verifying…" : "Verify"}
+                            {pwBusy ? t("signin.verifying") : t("signin.verify")}
                         </button>
                     {/if}
                 </form>
             {/if}
 
             {#if !info.password_enabled && !info.passkey_enabled && (info.oidc_providers?.length ?? 0) === 0}
-                <p class="muted">No sign-in methods are configured.</p>
+                <p class="muted">{t("signin.noMethods")}</p>
             {/if}
         {/if}
     </div>
